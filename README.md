@@ -17,21 +17,37 @@ Unlike standard solvers, this program features an adaptive self-weight calculati
 
 ## Mathematical Formulation
 
-The solver is built upon the structural stiffness matrix formulation. The local stiffness matrix $k$ for each truss member is mapped into the global coordinate system using the transformation matrix $T$:
+The solver is built upon the direct stiffness method formulation for 2D truss elements (Rangka Bidang). The global equilibrium equation for a single element relates the nodal forces to the nodal displacements through the element global stiffness matrix:
 
 $$
-k_{global} = T^T \cdot \begin{bmatrix} 
-\frac{AE}{L} & 0 & -\frac{AE}{L} & 0 \\ 
-0 & 0 & 0 & 0 \\ 
--\frac{AE}{L} & 0 & \frac{AE}{L} & 0 \\ 
-0 & 0 & 0 & 0 
-\end{bmatrix} \cdot T
+\begin{bmatrix} 
+f_{x_1} \\ 
+f_{y_1} \\ 
+f_{x_2} \\ 
+f_{y_2} 
+\end{bmatrix} = 
+\frac{EA}{L} \begin{bmatrix} 
+C^2 & CS & -C^2 & -CS \\ 
+CS & S^2 & -CS & -S^2 \\ 
+-C^2 & -CS & C^2 & CS \\ 
+-CS & -S^2 & CS & S^2 
+\end{bmatrix}
+\begin{bmatrix} 
+U_1 \\ 
+V_1 \\ 
+U_2 \\ 
+V_2 
+\end{bmatrix}
 $$
 
 Where:
-* $E$ = Modulus of Elasticity ($Pa$)
 * $A$ = Cross-sectional area ($m^2$)
+* $E$ = Modulus of Elasticity ($Pa$)
 * $L$ = Length of the truss element ($m$)
+* $C = \cos\theta$ (Direction cosine relative to the global x-axis)
+* $S = \sin\theta$ (Direction sine relative to the global y-axis)
+* $f_{x_n}, f_{y_n}$ = Global nodal force components at node $n$
+* $U_n, V_n$ = Global nodal displacement components at node $n$
 
 ### Gravity Adaptation & Self-Weight
 The uniform dead load of each element $w = \rho \cdot A \cdot g$ (where $\rho$ is material density and $g$ is the environmental gravitational acceleration) is distributed equally to its connecting joints (nodes) as structural point loads:
