@@ -432,28 +432,43 @@ def plot_truss(nodes, elements, forces, displacements, element_forces,
             )
             ax.text(nodes[node][0] + dx*1.05,
                     nodes[node][1] + dy*1.05,
-                    f"{mag/1e3:.1f}kN",
+                    f"{mag/1e3:.2f}kN",
                     fontsize=7.5, color='darkorange',
                     ha='center', va='center')
 
     # Support markers & reaction forces
     if reactions:
+        max_r = max(max(abs(rv[0]), abs(rv[1])) for rv in reactions.values())
+        max_r = max_r if max_r > 0 else 1.0
+        r_arrow_len = span * 0.12
+
         for node, rv in reactions.items():
             rx, ry = rv
+            nx, ny = nodes[node]
+
             if abs(rx) > 1.0:
-                ax.annotate("", xy=(nodes[node][0] - span*0.08, nodes[node][1]),
-                            xytext=(nodes[node][0], nodes[node][1]),
-                            arrowprops=dict(arrowstyle="-|>", color='purple',
-                                            lw=1.5, mutation_scale=12))
-                ax.text(nodes[node][0] - span*0.09, nodes[node][1],
-                        f"Rx={rx/1e3:.1f}kN", fontsize=7, color='purple', ha='right')
+                dx = (rx / max_r) * r_arrow_len
+                ax.annotate(
+                    "",
+                    xy=(nx + dx, ny),
+                    xytext=(nx, ny),
+                    arrowprops=dict(arrowstyle="-|>", color='purple',
+                                    lw=1.5, mutation_scale=12)
+                )
+                ax.text(nx + dx * 1.15, ny,
+                        f"Rx={rx / 1e3:.2f}kN", fontsize=7, color='purple', ha='center', va='bottom')
+
             if abs(ry) > 1.0:
-                ax.annotate("", xy=(nodes[node][0], nodes[node][1] - span*0.08),
-                            xytext=(nodes[node][0], nodes[node][1]),
-                            arrowprops=dict(arrowstyle="-|>", color='purple',
-                                            lw=1.5, mutation_scale=12))
-                ax.text(nodes[node][0], nodes[node][1] - span*0.09,
-                        f"Ry={ry/1e3:.1f}kN", fontsize=7, color='purple', ha='center')
+                dy = (ry / max_r) * r_arrow_len
+                ax.annotate(
+                    "",
+                    xy=(nx, ny + dy),
+                    xytext=(nx, ny),
+                    arrowprops=dict(arrowstyle="-|>", color='purple',
+                                    lw=1.5, mutation_scale=12)
+                )
+                ax.text(nx, ny + dy * 1.15,
+                        f"Ry={ry / 1e3:.2f}kN", fontsize=7, color='purple', ha='center', va='bottom')
 
     # Legend & decorations
     patch_tension     = mpatches.Patch(color='blue',       label='Tension')
@@ -474,6 +489,11 @@ def plot_truss(nodes, elements, forces, displacements, element_forces,
     ax.set_xlabel("X-axis (Meter)")
     ax.set_ylabel("Y-axis (Meter)")
     ax.grid(True, linestyle=':', alpha=0.5)
+    x_vals = [n[0] for n in nodes]
+    y_vals = [n[1] for n in nodes]
+    margin = span * 0.20
+    ax.set_xlim(min(x_vals) - margin, max(x_vals) + margin)
+    ax.set_ylim(min(y_vals) - margin, max(y_vals) + margin)
     ax.set_aspect('equal')
     plt.tight_layout()
 
