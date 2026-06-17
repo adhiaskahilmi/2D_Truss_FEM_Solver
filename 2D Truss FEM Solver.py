@@ -499,7 +499,11 @@ def plot_truss(nodes, elements, forces, displacements, element_forces,
     ax.set_aspect('equal')
     plt.tight_layout()
 
-    out_path = 'truss_output.png'
+    import os
+    idx = 1
+    while os.path.exists(f'truss_output_{idx}.png'):
+        idx += 1
+    out_path = f'truss_output_{idx}.png'
     plt.savefig(out_path, dpi=300, bbox_inches='tight')
     print(f"\n[SUCCESS] Visualization saved as '{out_path}'")
     plt.show()
