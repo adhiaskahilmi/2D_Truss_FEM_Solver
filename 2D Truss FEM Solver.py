@@ -326,8 +326,10 @@ def solve_truss_fem(nodes, elements, properties, forces, boundary_conditions):
     F_full = K_global @ u_global
     reactions = {}
     for node, bc in boundary_conditions.items():
-        rx = F_full[2*node]     if bc[0] else 0.0
-        ry = F_full[2*node + 1] if bc[1] else 0.0
+        f_ext_x = forces.get(node, [0.0, 0.0])[0]
+        f_ext_y = forces.get(node, [0.0, 0.0])[1]
+        rx = (F_full[2 * node] - f_ext_x) if bc[0] else 0.0
+        ry = (F_full[2 * node + 1] - f_ext_y) if bc[1] else 0.0
         reactions[node] = np.array([rx, ry])
 
     return u_global.reshape(-1, 2), element_forces, reactions
