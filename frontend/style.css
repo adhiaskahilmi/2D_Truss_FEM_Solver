@@ -1,0 +1,77 @@
+/* ── RESET & BASE ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; font-family: 'Segoe UI', system-ui, sans-serif; font-size: 13px; background: #0f1117; color: #e0e0e0; overflow: hidden; }
+
+/* ── APP LAYOUT ── */
+.app { display: flex; flex-direction: column; height: 100vh; }
+.workspace { display: grid; grid-template-columns: 220px 1fr 220px; flex: 1; overflow: hidden; }
+
+/* ── TOP BAR ── */
+.topbar { display: flex; align-items: center; gap: 8px; padding: 0 16px; height: 48px; background: #1a1d27; border-bottom: 1px solid #2a2d3e; flex-shrink: 0; }
+.topbar-title { font-weight: 600; font-size: 14px; color: #fff; margin-right: 8px; white-space: nowrap; }
+.topbar-tools { display: flex; gap: 4px; align-items: center; flex: 1; flex-wrap: wrap; }
+.tool-btn { padding: 5px 10px; border: 1px solid #2a2d3e; border-radius: 5px; background: #1e2130; color: #b0b8d0; cursor: pointer; font-size: 12px; transition: all .15s; white-space: nowrap; }
+.tool-btn:hover { background: #2a2d3e; color: #fff; }
+.tool-btn.active { background: #3b5bdb; border-color: #4c6ef5; color: #fff; }
+.tool-btn.danger { border-color: #c92a2a44; color: #ff6b6b; }
+.tool-btn.danger:hover { background: #c92a2a33; }
+.divider { width: 1px; height: 24px; background: #2a2d3e; margin: 0 4px; }
+.run-btn { margin-left: auto; padding: 7px 18px; background: #2f9e44; border: none; border-radius: 6px; color: #fff; font-weight: 600; font-size: 13px; cursor: pointer; transition: background .15s; white-space: nowrap; }
+.run-btn:hover { background: #37b24d; }
+
+/* ── PANELS ── */
+.left-panel, .right-panel { background: #1a1d27; border-right: 1px solid #2a2d3e; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+.right-panel { border-right: none; border-left: 1px solid #2a2d3e; }
+.panel-section { display: flex; flex-direction: column; gap: 5px; }
+.panel-label { font-size: 10px; font-weight: 600; letter-spacing: .08em; color: #5c6280; text-transform: uppercase; margin-bottom: 2px; display: flex; align-items: center; gap: 6px; }
+.count { background: #2a2d3e; color: #7986cb; border-radius: 10px; padding: 1px 6px; font-size: 10px; }
+label { font-size: 11px; color: #8890a8; margin-top: 2px; }
+input[type=number], input[type=text] { width: 100%; padding: 5px 8px; background: #0f1117; border: 1px solid #2a2d3e; border-radius: 4px; color: #e0e0e0; font-size: 12px; }
+input[type=number]:focus, input[type=text]:focus { outline: none; border-color: #3b5bdb; }
+.checkbox-label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #b0b8d0; cursor: pointer; }
+
+/* ── NODE/MEMBER LIST ── */
+.list { display: flex; flex-direction: column; gap: 3px; max-height: 150px; overflow-y: auto; }
+.list-item { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: #0f1117; border-radius: 4px; border: 1px solid #2a2d3e; font-size: 11px; color: #b0b8d0; cursor: pointer; }
+.list-item:hover { border-color: #3b5bdb44; background: #1e2130; }
+.list-item.selected { border-color: #3b5bdb; background: #1e2130; }
+.list-item-badge { font-size: 10px; padding: 1px 5px; border-radius: 3px; font-weight: 500; }
+.badge-pin    { background: #1864ab33; color: #74c0fc; }
+.badge-roller { background: #0b7a3333; color: #69db7c; }
+.badge-force  { background: #e6730033; color: #ffa94d; }
+
+/* ── CANVAS ── */
+.canvas-area { position: relative; background: #0c0e18; overflow: hidden; }
+#truss-canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+.canvas-hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: #2a2d3e; font-size: 15px; text-align: center; pointer-events: none; transition: opacity .3s; }
+.canvas-hint.hidden { opacity: 0; }
+.coord-display { position: absolute; bottom: 40px; left: 12px; font-size: 11px; color: #5c6280; background: #1a1d2799; padding: 3px 8px; border-radius: 4px; pointer-events: none; font-family: monospace; }
+.grid-controls { position: absolute; bottom: 10px; left: 12px; display: flex; align-items: center; gap: 6px; font-size: 11px; color: #5c6280; }
+
+/* ── RESULTS ── */
+.results-placeholder { color: #3a3f5c; font-size: 12px; text-align: center; padding: 24px 0; }
+.result-section { margin-bottom: 12px; }
+.result-title { font-size: 10px; font-weight: 600; letter-spacing: .08em; color: #5c6280; text-transform: uppercase; margin-bottom: 5px; }
+.result-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.result-table th { color: #5c6280; font-weight: 500; padding: 3px 5px; text-align: left; border-bottom: 1px solid #2a2d3e; }
+.result-table td { padding: 3px 5px; border-bottom: 1px solid #1e2130; }
+.tension    { color: #4dabf7; }
+.compression { color: #ff6b6b; }
+.equilibrium-bar { font-size: 11px; padding: 6px 8px; background: #0f1117; border-radius: 4px; border: 1px solid #2a2d3e; color: #8890a8; line-height: 1.8; }
+.eq-ok   { color: #69db7c; font-weight: 600; }
+.eq-warn { color: #ffa94d; font-weight: 600; }
+
+/* ── POPUPS ── */
+.overlay { position: fixed; inset: 0; background: #00000066; z-index: 100; }
+.popup { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: #1a1d27; border: 1px solid #2a2d3e; border-radius: 10px; padding: 20px; z-index: 101; min-width: 260px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 8px 32px #00000088; }
+.popup-title { font-weight: 600; font-size: 14px; color: #fff; margin-bottom: 4px; }
+.popup-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.popup-options button { padding: 12px 8px; background: #0f1117; border: 1px solid #2a2d3e; border-radius: 6px; color: #b0b8d0; cursor: pointer; font-size: 12px; text-align: center; transition: all .15s; }
+.popup-options button:hover { border-color: #3b5bdb; background: #1e2130; color: #fff; }
+.popup-actions { display: flex; gap: 8px; }
+.popup-actions button { flex: 1; padding: 7px; border-radius: 5px; border: 1px solid #2a2d3e; background: #0f1117; color: #b0b8d0; cursor: pointer; font-size: 12px; }
+.popup-actions button:first-child { background: #2f9e44; border-color: #2f9e44; color: #fff; }
+.popup-actions button:nth-child(2) { border-color: #c92a2a44; color: #ff6b6b; }
+.popup-close { background: none; border: none; color: #5c6280; cursor: pointer; font-size: 12px; text-align: center; }
+.popup-close:hover { color: #b0b8d0; }
+.force-preview { font-size: 11px; color: #5c6280; padding: 6px 8px; background: #0f1117; border-radius: 4px; font-family: monospace; min-height: 36px; }

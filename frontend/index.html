@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2D Truss FEM Solver</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="app">
+
+    <!-- ── TOP BAR ── -->
+    <header class="topbar">
+      <span class="topbar-title">2D Truss FEM Solver</span>
+      <div class="topbar-tools">
+        <button class="tool-btn active" id="btn-select"   onclick="setTool('select')"  title="Select (S)">⬡ Select</button>
+        <button class="tool-btn"        id="btn-node"     onclick="setTool('node')"    title="Add Node (N)">● Node</button>
+        <button class="tool-btn"        id="btn-member"   onclick="setTool('member')"  title="Add Member (M)">╱ Member</button>
+        <button class="tool-btn"        id="btn-support"  onclick="setTool('support')" title="Support (P)">△ Support</button>
+        <button class="tool-btn"        id="btn-force"    onclick="setTool('force')"   title="Force (F)">↓ Force</button>
+        <div class="divider"></div>
+        <button class="tool-btn danger" onclick="clearAll()"  title="Clear canvas">✕ Clear</button>
+        <button class="tool-btn danger" onclick="deleteSelected()" title="Delete selected">⌫ Delete</button>
+      </div>
+      <button class="run-btn" onclick="runAnalysis()">▶ Run Analysis</button>
+    </header>
+
+    <div class="workspace">
+
+      <!-- ── LEFT PANEL ── -->
+      <aside class="left-panel">
+        <div class="panel-section">
+          <div class="panel-label">MATERIAL</div>
+          <label>E (GPa)</label>
+          <input type="number" id="mat-E" value="200" step="1" min="1">
+          <label>A (cm²)</label>
+          <input type="number" id="mat-A" value="40" step="1" min="0.1">
+        </div>
+
+        <div class="panel-section">
+          <div class="panel-label">SELF-WEIGHT</div>
+          <label class="checkbox-label">
+            <input type="checkbox" id="sw-toggle"> Include
+          </label>
+          <label>g (m/s²)</label>
+          <input type="number" id="sw-g" value="9.81" step="0.01" min="0">
+          <label>ρ (kg/m³)</label>
+          <input type="number" id="sw-rho" value="7850" step="1" min="1">
+        </div>
+
+        <div class="panel-section">
+          <div class="panel-label">NODES <span class="count" id="count-nodes">0</span></div>
+          <div class="list" id="list-nodes"></div>
+        </div>
+
+        <div class="panel-section">
+          <div class="panel-label">MEMBERS <span class="count" id="count-members">0</span></div>
+          <div class="list" id="list-members"></div>
+        </div>
+      </aside>
+
+      <!-- ── CANVAS ── -->
+      <main class="canvas-area">
+        <canvas id="truss-canvas"></canvas>
+        <div class="canvas-hint" id="canvas-hint">
+          Select a tool from the top bar to start building your truss
+        </div>
+        <div class="coord-display" id="coord-display">x: 0.00 | y: 0.00</div>
+        <div class="grid-controls">
+          <label>Grid (m)</label>
+          <input type="number" id="grid-size" value="1" step="0.5" min="0.1" style="width:50px">
+          <label style="margin-left:8px">
+            <input type="checkbox" id="snap-toggle" checked> Snap
+          </label>
+        </div>
+      </main>
+
+      <!-- ── RIGHT PANEL ── -->
+      <aside class="right-panel">
+        <div class="panel-label">RESULTS</div>
+
+        <div id="results-placeholder" class="results-placeholder">
+          Run analysis to see results
+        </div>
+
+        <div id="results-content" style="display:none">
+          <div class="result-section">
+            <div class="result-title">Axial Forces</div>
+            <table class="result-table" id="tbl-forces">
+              <thead><tr><th>Elm</th><th>Force (kN)</th><th>Type</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <div class="result-section">
+            <div class="result-title">Displacements</div>
+            <table class="result-table" id="tbl-disp">
+              <thead><tr><th>Node</th><th>U (mm)</th><th>V (mm)</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <div class="result-section">
+            <div class="result-title">Support Reactions</div>
+            <table class="result-table" id="tbl-react">
+              <thead><tr><th>Node</th><th>Rx (kN)</th><th>Ry (kN)</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <div class="equilibrium-bar" id="eq-bar"></div>
+        </div>
+      </aside>
+
+    </div><!-- end workspace -->
+  </div><!-- end app -->
+
+  <!-- ── SUPPORT POPUP ── -->
+  <div class="popup" id="popup-support" style="display:none">
+    <div class="popup-title">Set Support — Node <span id="support-node-id"></span></div>
+    <div class="popup-options">
+      <button onclick="setSupport('pin')">Pin<br><small>Fix X, Y</small></button>
+      <button onclick="setSupport('roller')">Roller-Y<br><small>Fix Y</small></button>
+      <button onclick="setSupport('roller-x')">Roller-X<br><small>Fix X</small></button>
+      <button onclick="setSupport('free')">Free<br><small>Remove</small></button>
+    </div>
+    <button class="popup-close" onclick="closePopup('popup-support')">Cancel</button>
+  </div>
+
+  <!-- ── FORCE POPUP ── -->
+  <div class="popup" id="popup-force" style="display:none">
+    <div class="popup-title">Set Force — Node <span id="force-node-id"></span></div>
+    <label>Magnitude (kN)</label>
+    <input type="number" id="force-mag" value="10" step="1">
+    <label>Angle (°) — 0°=right, 90°=up, 270°=down</label>
+    <input type="number" id="force-angle" value="270" step="1" min="0" max="360">
+    <div class="force-preview" id="force-preview"></div>
+    <div class="popup-actions">
+      <button onclick="applyForce()">Apply</button>
+      <button onclick="removeForce()">Remove</button>
+      <button onclick="closePopup('popup-force')">Cancel</button>
+    </div>
+  </div>
+
+  <!-- ── OVERLAY ── -->
+  <div class="overlay" id="overlay" onclick="closeAllPopups()" style="display:none"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
