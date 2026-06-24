@@ -137,10 +137,12 @@
     <input type="number" id="force-angle" value="270" step="1" min="0" max="360">
     <div class="force-preview" id="force-preview"></div>
     <div class="popup-actions">
-      <button onclick="applyForce()">Apply</button>
-      <button onclick="removeForce()">Remove</button>
-      <button onclick="closePopup('popup-force')">Cancel</button>
+      <button onclick="applyForce()">Add Force</button>
+      <button onclick="removeForce()">Remove All</button>
+      <button onclick="closePopup('popup-force')">Done</button>
     </div>
+    <div style="margin-top:8px;font-size:10px;color:#5c6280;text-transform:uppercase;letter-spacing:.05em">Forces on this node</div>
+    <div id="force-list-container" class="force-list-container"></div>
   </div>
 
   <!-- ── OVERLAY ── -->

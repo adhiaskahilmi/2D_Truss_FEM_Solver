@@ -90,6 +90,7 @@ function drawMembers() {
     const isSelected = state.selected?.type === 'member' && state.selected.id === m.id;
 
     let color = '#4a5080', lw = 2.5;
+    let isZeroForce = false;
 
     // Color from analysis result
     if (state.analysisResult) {
@@ -97,10 +98,17 @@ function drawMembers() {
       if (res) {
         const maxF = Math.max(...state.analysisResult.element_results.map(r => r.force_kN), 0.001);
         const ratio = res.force_kN / maxF;
-        color = res.type === 'Compression'
-          ? `rgba(255, 100, 100, ${0.5 + 0.5 * ratio})`
-          : `rgba(70, 180, 255, ${0.5 + 0.5 * ratio})`;
-        lw = 1.5 + 3.5 * ratio;
+
+        if (res.force_kN < 0.001) {
+          isZeroForce = true;
+          color = '#ffffff';
+          lw    = 1.5;
+        } else {
+          color = res.type === 'Compression'
+            ? `rgba(255, 100, 100, ${0.5 + 0.5 * ratio})`
+            : `rgba(70, 180, 255, ${0.5 + 0.5 * ratio})`;
+          lw = 1.5 + 3.5 * ratio;
+        }
       }
     }
 
@@ -113,23 +121,24 @@ function drawMembers() {
     ctx.lineTo(pj.sx, pj.sy);
     ctx.stroke();
 
+    // Midpoint — used for both force label and member ID label
+    const mx = (pi.sx + pj.sx) / 2;
+    const my = (pi.sy + pj.sy) / 2;
+
     // Force label at midpoint
     if (state.analysisResult) {
       const res = state.analysisResult.element_results.find(r => r.element_id === state.members.indexOf(m));
       if (res) {
-        const mx = (pi.sx + pj.sx) / 2;
-        const my = (pi.sy + pj.sy) / 2;
-        ctx.fillStyle = res.type === 'Compression' ? '#ff6b6b' : '#4dabf7';
-        ctx.font = '11px monospace';
-        ctx.textAlign = 'center';
+        const typeTag = isZeroForce ? 'Z' : (res.type === 'Compression' ? 'C' : 'T');
+        ctx.fillStyle    = isZeroForce ? '#ffffff' : (res.type === 'Compression' ? '#ff6b6b' : '#4dabf7');
+        ctx.font         = '11px monospace';
+        ctx.textAlign    = 'center';
         ctx.textBaseline = 'bottom';
-        ctx.fillText(`${res.force_kN.toFixed(2)}kN`, mx, my - 4);
+        ctx.fillText(`${res.force_kN.toFixed(2)}kN (${typeTag})`, mx, my - 4);
       }
     }
 
     // Member ID label
-    const mx = (pi.sx + pj.sx) / 2;
-    const my = (pi.sy + pj.sy) / 2;
     ctx.fillStyle = '#3a3f5c';
     ctx.font = '10px sans-serif';
     ctx.textAlign = 'center';
@@ -150,7 +159,9 @@ function drawNodes() {
     else if (n.support === 'roller-x') drawRoller(sx, sy, 'x');
 
     // Draw force arrow
-    if (n.force) drawForceArrow(sx, sy, n.force.mag, n.force.angle);
+    if (n.forces && n.forces.length > 0) {
+      n.forces.forEach(f => drawForceArrow(sx, sy, f.mag, f.angle));
+    }
 
     // Draw node circle
     ctx.beginPath();
@@ -496,7 +507,7 @@ function distToSegment(px, py, ax, ay, bx, by) {
 
 // ── STATE MUTATIONS ────────────────────────────────────────────────────────────
 function addNode(x, y) {
-  state.nodes.push({ id: state.nextNodeId++, x, y, support: null, force: null });
+  state.nodes.push({ id: state.nextNodeId++, x, y, support: null, forces: [] });
   updateLists();
 }
 
@@ -572,14 +583,30 @@ function setSupport(type) {
 function openForcePopup(nodeId) {
   state.activePopupNode = nodeId;
   const idx = state.nodes.findIndex(n => n.id === nodeId);
-  const n   = state.nodes.find(n => n.id === nodeId);
   document.getElementById('force-node-id').textContent = idx;
-  if (n?.force) {
-    document.getElementById('force-mag').value   = n.force.mag;
-    document.getElementById('force-angle').value = n.force.angle;
-  }
+  document.getElementById('force-mag').value   = 10;
+  document.getElementById('force-angle').value = 270;
   updateForcePreview();
+  renderForceList(nodeId);
   showPopup('popup-force');
+}
+
+function renderForceList(nodeId) {
+  const n = state.nodes.find(n => n.id === nodeId);
+  const container = document.getElementById('force-list-container');
+  if (!n || !n.forces || n.forces.length === 0) {
+    container.innerHTML = '<div class="force-list-empty">No forces added yet</div>';
+    return;
+  }
+  container.innerHTML = n.forces.map((f, i) => {
+    const rad = f.angle * Math.PI / 180;
+    const fx  = (f.mag * Math.cos(rad)).toFixed(2);
+    const fy  = (f.mag * Math.sin(rad)).toFixed(2);
+    return `<div class="force-list-item">
+      <span>${f.mag}kN @ ${f.angle}° &nbsp;(Fx=${fx}, Fy=${fy})</span>
+      <button onclick="removeForceAt(${nodeId}, ${i})">✕</button>
+    </div>`;
+  }).join('');
 }
 
 function updateForcePreview() {
@@ -595,19 +622,41 @@ document.getElementById('force-mag').addEventListener('input', updateForcePrevie
 document.getElementById('force-angle').addEventListener('input', updateForcePreview);
 
 function applyForce() {
-  const mag   = +document.getElementById('force-mag').value;
-  const angle = +document.getElementById('force-angle').value;
-  const n     = state.nodes.find(n => n.id === state.activePopupNode);
-  if (n) n.force = { mag, angle };
-  closePopup('popup-force');
-  updateLists(); draw();
+    const mag = +document.getElementById('force-mag').value;
+    const angle = +document.getElementById('force-angle').value;
+    if (mag <= 0) {
+        alert('Magnitude must be greater than 0.');
+        return;
+    }
+    const n = state.nodes.find(n => n.id === state.activePopupNode);
+    if (n) {
+        if (!n.forces) n.forces = [];
+        n.forces.push({mag, angle});
+    }
+
+    renderForceList(state.activePopupNode);
+    updateLists();
+    draw();
+
+    document.getElementById('force-mag').value = 10;
+    document.getElementById('force-angle').value = 270;
+    updateForcePreview();
 }
 
 function removeForce() {
   const n = state.nodes.find(n => n.id === state.activePopupNode);
-  if (n) n.force = null;
-  closePopup('popup-force');
+  if (n) n.forces = [];
+  renderForceList(state.activePopupNode);
   updateLists(); draw();
+}
+
+function removeForceAt(nodeId, index) {
+  const n = state.nodes.find(n => n.id === nodeId);
+  if (n && n.forces) {
+    n.forces.splice(index, 1);
+    renderForceList(nodeId);
+    updateLists(); draw();
+  }
 }
 
 function showPopup(id) {
@@ -631,7 +680,9 @@ function updateLists() {
   nl.innerHTML = state.nodes.map((n, i) => {
     const badges = [];
     if (n.support) badges.push(`<span class="list-item-badge badge-pin">${n.support}</span>`);
-    if (n.force)   badges.push(`<span class="list-item-badge badge-force">${n.force.mag}kN@${n.force.angle}°</span>`);
+    if (n.forces && n.forces.length > 0) {
+      badges.push(`<span class="list-item-badge badge-force">${n.forces.length} force(s)</span>`);
+    }
     return `<div class="list-item" onclick="selectNode(${n.id})">
       <span>N${i} (${n.x}, ${n.y})</span>
       <span>${badges.join('')}</span>
@@ -666,12 +717,16 @@ async function runAnalysis() {
   const bcs    = {};
 
   state.nodes.forEach((n, idx) => {
-    if (n.force) {
-      const rad = n.force.angle * Math.PI / 180;
-      forces[idx] = {
-        fx: n.force.mag * Math.cos(rad) * 1e3,   // kN → N
-        fy: n.force.mag * Math.sin(rad) * 1e3,
-      };
+    if (n.forces && n.forces.length > 0) {
+      let totalFx = 0, totalFy = 0;
+      n.forces.forEach(f => {
+        const rad = f.angle * Math.PI / 180;
+        totalFx  += f.mag * Math.cos(rad) * 1e3;   // kN → N
+        totalFy  += f.mag * Math.sin(rad) * 1e3;
+      });
+      if (Math.abs(totalFx) > 1e-10 || Math.abs(totalFy) > 1e-10) {
+        forces[idx] = { fx: totalFx, fy: totalFy };
+      }
     }
     if (n.support === 'pin')      bcs[idx] = { fix_x: true,  fix_y: true  };
     if (n.support === 'roller')   bcs[idx] = { fix_x: false, fix_y: true  };
@@ -726,13 +781,17 @@ function showResults(data) {
 
   // Axial forces table
   document.querySelector('#tbl-forces tbody').innerHTML =
-    data.element_results.map(r =>
-      `<tr>
+    data.element_results.map(r => {
+      const isZero = r.force_kN < 0.001;
+      const cls    = isZero ? 'zero-force' : (r.type === 'Compression' ? 'compression' : 'tension');
+      const label  = isZero ? 'Zero-force' : r.type;
+      const val    = isZero ? '—' : r.force_kN.toFixed(3);
+      return `<tr>
         <td>E${r.element_id}</td>
-        <td class="${r.type === 'Compression' ? 'compression' : 'tension'}">${r.force_kN.toFixed(3)}</td>
-        <td class="${r.type === 'Compression' ? 'compression' : 'tension'}">${r.type}</td>
-      </tr>`
-    ).join('');
+        <td class="${cls}">${val}</td>
+        <td class="${cls}">${label}</td>
+      </tr>`;
+    }).join('');
 
   // Displacements table
   document.querySelector('#tbl-disp tbody').innerHTML =
