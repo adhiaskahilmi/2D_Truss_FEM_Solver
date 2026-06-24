@@ -1,74 +1,154 @@
-# 2D Structural Truss FEM Solver with Adaptive Self-Weight
+# 2D Truss FEM Solver
 
-A generalized 2D Finite Element Method (FEM) structural solver written in Python. This tool analyzes displacement, axial forces, and support reactions for any custom truss configuration. 
-
-Unlike standard solvers, this program features an adaptive self-weight calculation engine that adjusts automatically based on the gravity of the planetary or custom environmental setting, making it versatile for both terrestrial civil engineering and planetary habitat design.
+A generalized 2D structural truss solver using the **Finite Element Method (FEM)**, built from scratch in Python and upgraded into a full-stack interactive web application.
 
 ---
 
-## Key Features
+## Demo
 
-* **Generalized 2D FEM Engine:** Solves displacements, internal member axial forces, and boundary support reactions for arbitrary 2D truss geometries.
-* **Automated Self-Weight Conversion:** Mathematically transforms distributed member self-weight into equivalent nodal loads using consistent FEM kinetic formulas.
-* **Multi-Environment Gravity Vector:** Adapts calculations to different gravity constants. Default environment is set to Earth ($g = 9.81 \, m/s^2$), but can be customized for environments like the Moon ($1.62 \, m/s^2$) or Mars ($3.71 \, m/s^2$).
-* **Automated Visual Output:** Generates vector plots of the truss skeleton highlighting force distributions and deflections.
+> Place nodes → Connect members → Assign supports & forces → Run Analysis → See results instantly
 
----
-
-## Mathematical Formulation
-
-The solver is built upon the direct stiffness method formulation for 2D truss elements (Rangka Bidang). The global equilibrium equation for a single element relates the nodal forces to the nodal displacements through the element global stiffness matrix:
-
-$$
-\begin{bmatrix} 
-f_{x_1} \\ 
-f_{y_1} \\ 
-f_{x_2} \\ 
-f_{y_2} 
-\end{bmatrix} = 
-\frac{EA}{L} \begin{bmatrix} 
-C^2 & CS & -C^2 & -CS \\ 
-CS & S^2 & -CS & -S^2 \\ 
--C^2 & -CS & C^2 & CS \\ 
--CS & -S^2 & CS & S^2 
-\end{bmatrix}
-\begin{bmatrix} 
-U_1 \\ 
-V_1 \\ 
-U_2 \\ 
-V_2 
-\end{bmatrix}
-$$
-
-Where:
-* $A$ = Cross-sectional area ($m^2$)
-* $E$ = Modulus of Elasticity ($Pa$)
-* $L$ = Length of the truss element ($m$)
-* $C = \cos\theta$ (Direction cosine relative to the global x-axis)
-* $S = \sin\theta$ (Direction sine relative to the global y-axis)
-* $f_{x_n}, f_{y_n}$ = Global nodal force components at node $n$
-* $U_n, V_n$ = Global nodal displacement components at node $n$
-
-### Gravity Adaptation & Self-Weight
-The uniform dead load of each element $w = \rho \cdot A \cdot g$ (where $\rho$ is material density and $g$ is the environmental gravitational acceleration) is distributed equally to its connecting joints (nodes) as structural point loads:
-
-$$F_{\text{nodal gravity}} = \frac{w \cdot L}{2}$$
+![Web App Demo](demo.gif)
 
 ---
 
-## Sample Visual Output
+## Features
 
-The program automatically exports a graphical visualization of the truss analysis, showing the deformation profile, node labels, and structural topology:
+### FEM Solver (Backend)
+- **Direct Stiffness Method** — assembles global stiffness matrix [K] and solves F = K · U for nodal displacements, internal axial forces, and support reactions
+- **Support types** — Pin (fix X, Y), Roller-Y (fix Y), Roller-X (fix X)
+- **Automated self-weight** — calculates and distributes dead load per element based on cross-sectional area, material density, and gravitational acceleration
+- **Planetary gravity adaptation** — works for any gravitational environment (Earth 9.81, Moon 1.62, Mars 3.72 m/s²)
+- **Equilibrium verification** — automatically checks ΣFx ≈ 0 and ΣFy ≈ 0 as solution validation
+- **Stability detection** — checks stiffness matrix condition number before solving; catches unstable or underconstrained structures
 
-<p align="center">
-  <img src="truss_output.png" alt="Truss FEM Output Plot" width="600"/>
-</p>
+### Interactive Web App (Frontend)
+- **Canvas-based GUI** — place nodes, connect members, and assign loads directly on an interactive canvas
+- **Force input by angle** — input force magnitude (kN) and direction angle (°) instead of Fx/Fy components
+- **Real-time color-coded visualization** — blue = tension, red = compression; line thickness proportional to force magnitude
+- **Support reaction arrows** — rendered on canvas after analysis (purple arrows)
+- **Self-weight indicators** — visualized as downward green arrows on canvas when enabled
+- **Results panel** — axial forces, displacements (U, V in mm), and support reactions displayed in the sidebar
+- **Zoom & pan** — scroll to zoom, Alt+drag to pan
+- **Keyboard shortcuts** — `N` node, `M` member, `P` support, `F` force, `S` select, `Delete` to remove
 
 ---
 
-## Requirements & Installation
+## Tech Stack
 
-Make sure you have Python installed along with the required matrix processing and plotting libraries:
+| Layer | Technology |
+|---|---|
+| FEM Solver | Python, NumPy |
+| Backend API | FastAPI, Uvicorn |
+| Frontend | HTML, CSS, JavaScript (Canvas API) |
+| Visualization (legacy) | Matplotlib |
 
+---
+
+## Project Structure
+
+```
+2D-Truss-FEM-Solver/
+├── backend/
+│   ├── main.py       # Standalone CLI FEM solver (original)
+│   └── api.py        # FastAPI backend — wraps solver as REST API
+└── frontend/
+    ├── index.html    # Web app UI
+    ├── style.css     # Styling
+    └── app.js        # Canvas logic, tools, analysis call
+```
+
+---
+
+## How to Run
+
+### 1. Clone the repository
 ```bash
-pip install numpy matplotlib
+git clone https://github.com/your-username/2D-Truss-FEM-Solver.git
+cd 2D-Truss-FEM-Solver
+```
+
+### 2. Install Python dependencies
+```bash
+pip install fastapi uvicorn numpy
+```
+
+### 3. Start the backend
+```bash
+cd backend
+uvicorn api:app --reload
+```
+Backend runs at `http://127.0.0.1:8000`
+
+### 4. Open the frontend
+Open `frontend/index.html` in your browser.
+
+---
+
+## How to Use
+
+| Step | Action |
+|---|---|
+| 1 | Press `N` or click **Node** tool → click canvas to place nodes |
+| 2 | Press `M` or click **Member** tool → click node A then node B |
+| 3 | Press `P` or click **Support** tool → click a node → choose Pin / Roller-Y / Roller-X |
+| 4 | Press `F` or click **Force** tool → click a node → input magnitude (kN) and angle (°) |
+| 5 | Set material properties (E, A) and self-weight settings in the left panel |
+| 6 | Click **▶ Run Analysis** |
+
+Results appear instantly on the canvas and in the right panel.
+
+---
+
+## FEM Theory
+
+The solver implements the **Direct Stiffness Method** for 2D pin-jointed truss structures:
+
+```
+1. Build local stiffness matrix for each element:
+   k = (EA/L) × [c², cs, -c², -cs; ...]   where c = cosθ, s = sinθ
+
+2. Assemble into global stiffness matrix [K]
+
+3. Apply boundary conditions (eliminate restrained DOFs)
+
+4. Solve: {U} = [K_reduced]⁻¹ {F_reduced}
+
+5. Compute axial forces: F = (EA/L) × [-c, -s, c, s] · {u_element}
+
+6. Compute reactions: {R} = [K]{U} - {F_external at supports}
+
+7. Verify: ΣFx ≈ 0, ΣFy ≈ 0
+```
+
+Each node has 2 DOFs (U horizontal, V vertical). Minimum 3 restrained DOFs required for a stable 2D truss.
+
+---
+
+## Stability Check
+
+The solver uses the classic truss stability formula:
+
+```
+m + r = 2n
+
+m = number of members
+r = number of restrained DOFs
+n = number of nodes
+
+m + r < 2n → mechanism (unstable)
+m + r = 2n → statically determinate
+m + r > 2n → statically indeterminate (redundant)
+```
+
+---
+
+## License
+
+MIT License — free to use, modify, and distribute.
+
+---
+
+## Author
+
+Built by Muhammad Adhiaska Hilmiyanda · [LinkedIn](https://linkedin.com/in/adhlaska) · [GitHub](https://github.com/adhiaskahilmi)
